@@ -1,15 +1,21 @@
-import requests
-from bs4 import BeautifulSoup as bs4
-import csv
+import csv, random
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from bs4 import BeautifulSoup
+
 
 url = "https://prodoctorov.ru/krasnodar/vrach/109211-lobach/"
+keywords = ['стомат', 'клини', 'институт', 'космет', 'центр', 'больн', 'лаборат']
 
-headers = {
-    "User-Agent": "Mozilla/4.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-}
+service = Service("O:\\Dev\\chromedriver.exe")
+driver = webdriver.Chrome(service=service)
 
-response = requests.get(url, headers=headers)
-soup = bs4(response.content, "html.parser")
+driver.get(url)
+driver.implicitly_wait(random.randint(5, 15))  # Ждём, пока загрузится вся страница
+
+html = driver.page_source
+soup = BeautifulSoup(html, 'html.parser')
 
 def extract_doctor_info(soup):
     # ФИО врача
@@ -18,34 +24,32 @@ def extract_doctor_info(soup):
     # Специализация
     specialization_tag = soup.find("div", class_="b-doctor-intro__specs")
     specializations = [spec.text for spec in specialization_tag.find_all("a")]
-    result = ", ".join(specializations)
-    specialization = "•" if not result else result
-
+    specialization = ", ".join(specializations)
+    
     # Стаж работы
     stazh_tag = soup.find("div", class_="ui-text_subtitle-1")
-    if stazh_tag:
-        experience = stazh_tag.text.replace('Стаж', '').strip()
-    else:
-        experience = "•"
+    experience = stazh_tag.text.replace('Стаж', '').strip() if stazh_tag else "•"
 
     # Звания
     target_div = soup.find("div", class_="text-left mr-2")
-
-    if target_div:
-        zvaniya_tags = target_div.find_all("span", class_="b-doctor-card__text-with-dot")
-        
-        # Объединяем тексты тегов в одну строку с разделителем ", "
-        zvaniya = ', '.join([tag.text.strip() for tag in zvaniya_tags])
-    else:
-        zvaniya = "•"
+    zvaniya_tags = target_div.find_all("span", class_="b-doctor-card__text-with-dot") if target_div else []
+    zvaniya = ', '.join([tag.text.strip() for tag in zvaniya_tags])
 
     # Клиника
-    clinic_tag = soup.find("div", class_="doctor-place")
-    clinic = clinic_tag.text.strip() if clinic_tag else "•"
+    filtered_clinic_texts = []
+    clinic_links = soup.find_all('a', href=lambda href: href and '/lpu/' in href)
+    for link in clinic_links:
+        if any(keyword.lower() in link.get_text().lower() for keyword in keywords):
+            clinic_name = link.get_text(strip=True)
+            clinic_url = link['href']
+            filtered_clinic_texts.append(f"{clinic_name} ({clinic_url})")
+
+    clinic = filtered_clinic_texts
 
     # Общий рейтинг врача
-    rating_tag = soup.find("div", class_="rating-value")
-    rating = rating_tag.text.strip() if rating_tag else "•"
+    rating_element = soup.find(id="doctor-rating")
+    rating_value = rating_element.find(class_="ui-text_h5").text
+    rating = rating_value
 
     # Количество отзывов
     reviews_count_tag = soup.find("a", href="#reviews")
@@ -59,20 +63,22 @@ def extract_doctor_info(soup):
     photo_tag = soup.find("div", class_="doctor-photo img-circle")
     photo_url = photo_tag.img['src'] if photo_tag and photo_tag.img else "•"
 
+   
     return {
         "ФИО": fio,
         "Специализация": specialization,
         "Стаж работы": experience,
         "Полученные степени": zvaniya,
         "Клиника": clinic,
-        "Рейтинг": rating,
-        "Количество отзывов": reviews_count,
+        "отзывов": reviews_count,
         "Образование": education,
-        "Фото": photo_url
+        "Фото": photo_url,
+        "рейтинг": rating,
     }
 
 doctor_info = extract_doctor_info(soup)
 
+# Сохранение данных в CSV файл
 def save_to_csv(data, filename="doctors.csv"):
     with open(filename, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=data.keys(), delimiter=';')
@@ -84,3 +90,5 @@ def save_to_csv(data, filename="doctors.csv"):
 save_to_csv(doctor_info)
 
 print(f"Данные {doctor_info['ФИО']} сохранены.")
+
+driver.quit()
