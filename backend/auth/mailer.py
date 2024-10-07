@@ -1,38 +1,64 @@
-import smtplib
-from email.message import EmailMessage
-from dotenv import load_dotenv
 import os
+import re
 
-from core.config import settings
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+from dotenv import load_dotenv
+from email_validator import validate_email, EmailNotValidError
+
+from core.logger import logger
 
 
 load_dotenv()
+
 
 EMAIL_USERNAME = os.getenv("EMAIL_USERNAME")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT"))
 
+conf = ConnectionConfig(
+    MAIL_USERNAME=EMAIL_USERNAME,
+    MAIL_PASSWORD=EMAIL_PASSWORD,
+    MAIL_FROM=EMAIL_USERNAME,
+    MAIL_PORT=SMTP_PORT,
+    MAIL_SERVER=SMTP_SERVER,
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True
+)
 
-def send_email(subject: str, to_email: str, html_content: str):
-    message = EmailMessage()
-    message.add_alternative(html_content, subtype="html")
-    message["Subject"] = subject
-    message["From"] = EMAIL_USERNAME
-    message["To"] = to_email
-
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
-        server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_USERNAME, to_email, message.as_string())
+fastmail = FastMail(conf)
 
 
-def send_verification_email(username: str, email: str, token: str):
-
+async def send_forgot_password_email(name: str, email: str):
     html_content = f"""
     <html>
         <body>
-            <p>Привет, {username}!</p>
+            <p>Здравствуйте, {name}!</p>
+            <p>К сожалению, по соображениям безопасности мы не можем отправить вам ваш текущий пароль. Однако, вы можете сбросить его, перейдя по следующей ссылке:</p>
+            <a href="http://127.0.0.1:8000/reset_password">[Ссылка для сброса пароля]</a>
+            <p>Эта ссылка будет активна в течение 60 минут.</p>
+            <p>Если вы не запрашивали сброс пароля, просто проигнорируйте это сообщение.</p>
+            <br>
+            <p>С наилучшими пожеланиями,<br>Команда ####</p>
+        </body>
+    </html>
+    """
+
+    message = MessageSchema(
+            subject="Reset your password",
+            recipients=[email],
+            body=html_content,
+            subtype="html"
+        )
+    await fastmail.send_message(message)
+
+
+async def send_verification_email(name: str, email: str, token: str):
+    html_content = f"""
+    <html>
+        <body>
+            <p>Привет, {name}!</p>
             <p>Спасибо за регистрацию на нашем сайте. Пожалуйста, подтвердите ваш email, нажав на кнопку ниже:</p>
             <a href="http://127.0.0.1:8000/api/v1/users/verify/{token}">Подтвердить Email</a>
             <p>Если вы не регистрировались на нашем сайте, просто проигнорируйте это письмо.</p>
@@ -41,22 +67,26 @@ def send_verification_email(username: str, email: str, token: str):
         </body>
     </html>
     """
-    send_email("Email verification", email, html_content)
+    try:
+        # Базовая проверка формата email
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            raise ValueError("Invalid email format")
 
+        # Более строгая проверка email
+        validate_email(email)
 
-def send_forgot_password_email(username: str, email: str):
-
-    html_content = f"""
-    <html>
-        <body>
-            <p>Здравствуйте, {username}!</p>
-            <p>К сожалению, по соображениям безопасности мы не можем отправить вам ваш текущий пароль. Однако, вы можете сбросить его, перейдя по следующей ссылке:</p>
-            <a href="http://127.0.0.1:8000/api/v1/users/reset_password">[Ссылка для сброса пароля]</a>
-            <p>Эта ссылка будет активна в течение 60 минут.</p>
-            <p>Если вы не запрашивали сброс пароля, просто проигнорируйте это сообщение.</p>
-            <br>
-            <p>С наилучшими пожеланиями,<br>Команда ####</p>
-        </body>
-    </html>
-    """
-    send_email("Email verification", email, html_content)
+        message = MessageSchema(
+            subject="Verify your email",
+            recipients=[email],
+            body=html_content,
+            subtype="html"
+        )
+        await fastmail.send_message(message)
+        logger.info(f"Verification email sent successfully to {email}")
+        return True
+    except EmailNotValidError as e:
+        logger.error(f"Invalid email address {email}: {str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to send email to {email}: {str(e)}")
+        return False

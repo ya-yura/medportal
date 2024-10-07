@@ -1,21 +1,19 @@
 
-import time
-from functools import wraps
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_users import FastAPIUsers
-from fastapi_users import exceptions as fastapi_exceptions
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import bcrypt
 
-from core.models import User, db_helper
+from core.models.user import User
 from core.logger import logger
-from auth.schemas import UserCreate, UserRead, UserUpdate
-from auth.manager import UserManager, get_user_manager
+from auth.schemas import UserRead, UserUpdate
+from auth.manager import get_user_manager
 from auth.auth import auth_backend
 from auth.mailer import send_forgot_password_email
+from core.connection import get_async_session
 
-from pydantic import validator
+# from pydantic import validator
 
 
 def hash_password(password: str) -> str:
@@ -34,7 +32,7 @@ current_user = fastapi_users.current_user()
 # @measure_execution_time
 async def get_current_user(
     current_user: UserRead = Depends(current_user),
-    db: AsyncSession = Depends(db_helper.session_getter),
+    db: AsyncSession = Depends(get_async_session),
 ):
     query = await db.execute(
         select(
@@ -55,7 +53,7 @@ async def get_current_user(
 async def verify_user_token(
     token: str,
     current_user: UserRead = Depends(current_user),
-    db: AsyncSession = Depends(db_helper.session_getter),
+    db: AsyncSession = Depends(get_async_session),
 ):
     query = await db.execute(
         select(User)
@@ -111,7 +109,7 @@ async def get_user_by_email2(
 @router.put("/update_user")
 async def update_user(
     user: UserUpdate,
-    db: AsyncSession = Depends(db_helper.session_getter),
+    db: AsyncSession = Depends(get_async_session),
     current_user: UserRead = Depends(current_user),
 ):
     query = await db.execute(select(User).where(User.id == current_user.id))
@@ -131,7 +129,7 @@ async def update_user(
 @router.delete("/delete/{email}")
 async def delete_user(
     email: str,
-    db: AsyncSession = Depends(db_helper.session_getter),
+    db: AsyncSession = Depends(get_async_session),
     current_user: UserRead = Depends(current_user),
 ):
     user_db = await db.execute(select(User).where(User.email == email))
@@ -152,13 +150,13 @@ async def delete_user(
 @router.post("/forgot_password")
 async def forgot_password(
     email: str,
-    db: AsyncSession = Depends(db_helper.session_getter),
+    db: AsyncSession = Depends(get_async_session),
 ):
     query = await db.execute(select(User).where(User.email == email))
     user = query.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    send_forgot_password_email(user.name, user.email)
+    await send_forgot_password_email(user.name, user.email)
     logger.info(f"Email forgot_password sent to {email}")
     return {"message": "Email sent successfully."}
 
@@ -166,10 +164,9 @@ async def forgot_password(
 @router.post("/reset_password")
 async def reset_password(
     new_password: str,
-    db: AsyncSession = Depends(db_helper.session_getter),
+    db: AsyncSession = Depends(get_async_session),
     current_user: UserRead = Depends(current_user),
 ):
-
     query = await db.execute(select(User).where(User.id == current_user.id))
     user = query.scalars().first()
     if not user:

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, Integer, Column, String, Boolean, ForeignKey, Index
+from sqlalchemy import TIMESTAMP, Integer, Column, String, Boolean, ForeignKey
 
 from .base import Base
 
@@ -21,6 +21,7 @@ class User(Base):
     hashed_password = Column(String(length=1024), nullable=False)
     registered_at = Column(TIMESTAMP, default=datetime.utcnow)
     role_id = Column(Integer, ForeignKey('Role.id'), nullable=False)
+    adress = Column(String, nullable=True)
 
     name = Column(String, nullable=False)
     surname = Column(String, nullable=False)
@@ -31,8 +32,3 @@ class User(Base):
     is_verified = Column(Boolean, nullable=False, default=False)
     is_superuser = Column(Boolean, nullable=False, default=False)
     verification_token = Column(String, nullable=True)
-
-    # Явное создание индекса через SQLAlchemy
-    __table_args__ = (
-        Index('idx_users_email', 'email'),  # Явно создаем индекс на поле email
-    )

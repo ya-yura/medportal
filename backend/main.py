@@ -7,10 +7,8 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from api import router as api_router
+from api.users import router as users_router
 from auth.manager import get_user_manager
-from core.config import settings
-from core.models.db_helper import db_helper
 from core.connection import User
 from core.logger import logger
 from core.middleware import log_middleware
@@ -18,18 +16,18 @@ from auth.auth import auth_backend
 from auth.schemas import UserCreate, UserRead
 
 
-@asynccontextmanager
+'''@asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
     yield
     # shutdown
-    await db_helper.dispose()
+    await db_helper.dispose()'''
 
 
 app = FastAPI(
     default_response_class=ORJSONResponse,
     title="MedPortal",
-    lifespan=lifespan,
+    # lifespan=lifespan,
     )
 
 app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
@@ -52,17 +50,4 @@ app.include_router(
     tags=["auth"],
 )
 
-app.include_router(
-    fastapi_users.get_reset_password_router(),
-    prefix="/auth",
-    tags=["auth"],
-)
-
-app.include_router(api_router)
-
-if __name__ == "__main__":
-    uvicorn.run(
-        app,
-        host=settings.run.host,
-        port=settings.run.port,
-    )
+app.include_router(users_router)

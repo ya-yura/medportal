@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+'''from pydantic import BaseModel
 from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,7 +20,11 @@ class ApiPrefix(BaseModel):
 
 
 class DatabaseConfig(BaseModel):
-    url: PostgresDsn
+    postgres_db: str
+    postgres_user: str
+    postgres_password: str
+    host: str
+    port: int
     echo: bool = False
     echo_pool: bool = False
     pool_size: int = 50
@@ -40,7 +44,18 @@ class Settings(BaseSettings):
     )
     run: RunConfig = RunConfig()
     api: ApiPrefix = ApiPrefix()
-    db: DatabaseConfig
 
 
-settings = Settings()
+settings = Settings()'''
+
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DB_HOST = os.environ.get("DB_HOST")
+DB_PORT = os.environ.get("DB_PORT")
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASS = os.environ.get("DB_PASS")

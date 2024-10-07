@@ -55,7 +55,6 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         """
 
         try:
-
             await self.validate_password(user_create.password, user_create)
 
             existing_user = await self.user_db.get_by_email(user_create.email)
@@ -76,21 +75,39 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             user_dict["role_id"] = 2
             user_dict["verification_token"] = str(uuid.uuid4())
 
+            # Пытаемся отправить email перед созданием пользователя
+            email_sent = await send_verification_email(
+                user_dict["name"],
+                user_dict["email"],
+                user_dict["verification_token"]
+            )
+
+            if not email_sent:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to send verification email. Please try again or use a different email address."
+                )
+
             created_user = await self.user_db.create(user_dict)
             logger.info(f"User {created_user.email} created successfully.")
 
-            await self.on_after_register(
-                created_user, request, # background_tasks
-            )
-
             return created_user
 
+        except exceptions.UserAlreadyExists:
+            raise HTTPException(
+                status_code=400,
+                detail="User with this email already exists."
+            )
+        except HTTPException as he:
+            # Пробрасываем HTTPException дальше
+            raise he
         except Exception as e:
             logger.exception(
                 f"Error creating user {user_create.email}: {str(e)}"
             )
             raise HTTPException(
-                status_code=500, detail="Failed to create user"
+                status_code=500,
+                detail="Failed to create user. Please try again later."
             )
 
     async def on_after_register(
@@ -100,7 +117,7 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         # background_tasks: BackgroundTasks = None,
     ):
         try:
-            send_verification_email(
+            await send_verification_email(
                 user.name,
                 user.email,
                 user.verification_token)
@@ -115,9 +132,6 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         except Exception as e:
             logger.exception(
                 f"Failed to send verification email to {user.email}: {str(e)}"
-            )
-            raise HTTPException(
-                status_code=500, detail="Failed to send verification email"
             )
 
     async def on_after_request_verify(
@@ -156,11 +170,8 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             # await self.user_db.update(user)
             logger.info(f"Forgot password email sent to {user.email}.")
 
-            send_forgot_password_email(
-                user.name,
-                user.email,
-                # user.reset_password_token
-            )
+            await send_forgot_password_email(user.name, user.email)
+
         except Exception as e:
             logger.exception(
                 f"Failed to send reset password email to {user.email}: {str(e)}"
