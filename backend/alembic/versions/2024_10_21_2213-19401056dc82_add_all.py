@@ -1,7 +1,7 @@
 """add all
 
 Revision ID: 19401056dc82
-Revises: 
+Revises:
 Create Date: 2024-10-21 22:13:06.386035
 
 """
