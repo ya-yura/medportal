@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import aliased, sessionmaker
 from fastapi_users.db import SQLAlchemyUserDatabase
 
-from core.models.user import User
+from backend.core.models.db_model import User
 
 
 DATABASE_URL = f"postgresql+psycopg2://postgres:postgres@localhost:5433/medportal"

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import bcrypt
 
-from core.models.user import User
+from core.models.db_model import User
 from core.logger import logger
 from auth.schemas import UserRead, UserUpdate
 from auth.manager import get_user_manager
@@ -42,7 +42,7 @@ async def get_current_user(
             User.surname,
             User.fathername,
             User.username,
-            User.phone
+            User.phone_number
         ).where(User.id == current_user.id)
     )
     result = query.mappings().first()

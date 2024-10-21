@@ -3,7 +3,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from core.models.user import User
+from core.models.db_model import User
 from core.config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
 
 

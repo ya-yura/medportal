@@ -72,7 +72,6 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             )
             password = user_dict.pop("password")
             user_dict["hashed_password"] = self.password_helper.hash(password)
-            user_dict["role_id"] = 2
             user_dict["verification_token"] = str(uuid.uuid4())
 
             # Пытаемся отправить email перед созданием пользователя

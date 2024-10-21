@@ -26,14 +26,16 @@ class UserCreate(schemas.BaseUserCreate):
     username: str
     email: str
     password: str
-    role_id: int
-    is_active: Optional[bool] = True
-    is_superuser: Optional[bool] = False
-    is_verified: Optional[bool] = False
     name: str
     surname: str
     fathername: str
-    phone: str
+    phone_number: str
+    role: str
+    karma: int = 0
+    level: int = 1
+    is_active: Optional[bool] = True
+    is_superuser: Optional[bool] = False
+    is_verified: Optional[bool] = False
 
 
 class UserData(BaseModel):
@@ -44,11 +46,13 @@ class UserRead(schemas.BaseUser):
     id: int
     email: str
     username: str
-    role_id: int
     name: str
     surname: str
     fathername: str
-    phone: str
+    phone_number: str
+    role: str
+    karma: int
+    level: int
 
 
 class UserUpdate(UserRead):

@@ -1,8 +1,4 @@
-from contextlib import asynccontextmanager
-
-
 from fastapi_users import FastAPIUsers
-import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
