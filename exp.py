@@ -40,9 +40,24 @@ dir_list = element_generator(list)
 for item in dir_list:
     print(item)'''
 
+# import copy
 
+# a = [10, [1, 2], 2, 3]
+# b = copy.deepcopy(a)
 
-a = 1000000888
-b = int(1000000888)
+# print(a)
+# print(b)
+# print()
 
-print(a is b)
+# print(id(a))
+# print(id(b))
+# print()
+# print(a == b)
+# print(a is b)
+# print()
+# b[1].append(4)
+# print(a)
+# print(b)
+c = ''
+print(c.strip(' ') == '')
+  
