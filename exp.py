@@ -15,4 +15,34 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 
-'''
+import pprint
+from dataclasses import dataclass
+
+
+@dataclass
+class MyClass:
+    name: str
+    value: int
+
+
+obj = MyClass(name='Sergey', value=42)
+
+
+def element_generator(list):
+    for item in list:
+        yield item
+
+
+list = dir(obj)
+
+dir_list = element_generator(list)
+
+for item in dir_list:
+    print(item)'''
+
+
+
+a = 1000000888
+b = int(1000000888)
+
+print(a is b)
